@@ -1,0 +1,7 @@
+A.S. for H(aca va aslguna descripcion)
+&SALGEB MXCONF=2 MXVORB=2 CUP='IC' RAD='E1' &END
+ 1 0  2 1
+  1     0   
+  0     1
+&SMINIM NZION=1 &END
+

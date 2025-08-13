@@ -1,0 +1,156 @@
+N. R. Badnell         A U T O S T R U C T U R E               11/09/23
+                      *************************
+                               (30.x)
+
+This write-up, codes and installation instructions are available
+via the WWW from http://www.apap-network.org/autos/ .
+
+TRADUCCIÓN - SECCIÓN 1: INTRODUCCIÓN
+
+Históricamente, AUTOSTRUCTURE (AS) fue desarrollado a partir de SUPERSTRUCTURE (SS).
+La teoría detrás de SS está descrita por Eissner, Jones y Nussbaumer en su artículo de Computer Physics Communications, CPC8, 270-306 (1974).
+Desarrollos significativos adicionales fueron realizados por Storey (no publicado).
+
+SS trata problemas de estados ligados: niveles de energía y tasas radiativas (E_k y M_k).
+AS, además, trata colisiones: tasas de autoionización, secciones eficaces de fotoionización y excitación por impacto electrónico (EIE), por ejemplo.
+Parte de la teoría original puede encontrarse en Badnell J.Phys.B19, 3827–35 (1986).
+Para EIE, ver Eissner CPC114, 295–341 (1998) y Badnell CPC182, 1528–35 (2011).
+
+Este documento es una guía simple para comenzar. No es exhaustiva.
+En general, si querés hacer algo que no está descripto aquí, pero es físicamente posible, entonces probablemente el código ya lo soporte, aunque no esté detallado.
+
+Todos los ejemplos pueden encontrarse en el directorio test_suite, junto con la salida generada al ejecutarlos localmente.
+
+2a. Niveles de Energía y Tasas Radiativas
+(2a. Energy levels & Radiative rates)
+
+Toda la entrada que se describe está en formato libre y usa NAMELIST, EXCEPTO los primeros 4 caracteres de la línea 1, que indican el tipo de entrada.
+Aquí nos enfocamos en A.S. (también existe S.S., que permite ingresar configuraciones en formato fijo usando la notación de Eissner, pero no entraremos en detalles).
+
+Entonces:
+
+A.S. inicia el archivo y el resto de la línea se usa como comentario.
+Luego tenemos el bloque NAMELIST "álgebra", llamado &SALGEB: por ejemplo,
+
+ &SALGEB  MXCONF=3 MXVORB=3  &END
+Esto es lo mínimo requerido, donde:
+
+MXCONF = número de configuraciones objetivo (target)
+MXVORB = número de orbitales de electrones (valencia) distintos que las describen.
+Ejemplo: para el ion Be-like C²⁺ descrito por las configuraciones
+1s² 2s², 1s² 2s 2p y 1s² 2p²:
+
+ 1 0  2 0  2 1
+  2    2    0
+  2    1    1
+  2    0    2
+Nota: La entrada es de formato libre.
+Primero se listan los números cuánticos n y l de los MXVORB orbitales,
+luego las ocupaciones para cada una de las MXCONF configuraciones.
+
+Finalmente, usamos el NAMELIST "radial" llamado SMINIM, donde se define la carga nuclear:
+
+ &SMINIM NZION=6  &END
+En este caso, NZION=6 corresponde al carbono.
+
+Ejemplo 1 — Estructura tipo Be del carbono (solo energías):
+A.S. Be-like C estructura - energías
+ &SALGEB MXCONF=3 MXVORB=3  &END
+ 1 0  2 0  2 1
+  2    2    0
+  2    1    1
+  2    0    2
+ &SMINIM NZION=6  &END
+Esto genera los niveles de energía en acoplamiento LS.
+Se obtiene una salida tipo:
+
+  I         T        K*CM  2S+1 L   CF     WEIGHTS        (EI-E1)/RY     E1/RY =    -72.851751
+  1         5           0.    1 0    1       0.000          0.000000
+  2         3       53615.   -3 1    2       0.000          0.488573
+  3         4      110474.   -1 1    2       0.000          1.006710
+  ...
+El archivo de salida principal es olg. También se crean archivos más "amigables para máquina", como TERMS y ols.
+
+Ejemplo 2 — Estructura tipo Be del carbono con tasas radiativas:
+Para obtener acoplamiento intermedio (IC) y tasas de radiación dipolar eléctrica (E1), agregamos parámetros:
+
+A.S. Be-like C estructura - energías + tasas radiativas
+ &SALGEB CUP='IC' RAD='E1' MXCONF=3 MXVORB=3  &END
+ 1 0  2 0  2 1
+  2    2    0
+  2    1    1
+  2    0    2
+ &SMINIM NZION=6  &END
+Salida típica:
+
+  K        LV         T        K*CM     2*S+1  L   2J   CF         (EK-E1)/RY     E1/RY =   -72.87735554               
+  1         8         5           0.      1    0    0    1         0.00000000
+  2        10         3       53644.     -3    1    0    2         0.48884296
+  ...
+Y además datos como:
+
+E1-DATA   K  KP           A(EK)*SEC           S               G*F   
+  1        3   1           2.068E+02       0.000002         3.227E-07
+  2        5   1           2.414E+09       2.643179         8.879E-01
+  ...
+A(EK)*SEC = tasa de emisión espontánea en s⁻¹
+S = intensidad de línea
+G*F = fuerza osciladora (oscilator strength)
+Las tasas negativas indican solo el signo del elemento de matriz antes de elevarlo al cuadrado.
+
+2b. Autoionización y Fotoionización
+
+(Autoionization & Photoionization)
+
+Este tipo de cálculos se realizan de forma independiente de los cálculos de energía/tasas radiativas (sección 2a).
+En lugar de usar el NAMELIST SALGEB, se utiliza el NAMELIST SALGIN.
+
+Ejemplo mínimo:
+
+A.I. Autoionización en Be-like C
+ &SALGIN MXCONF=3 MXVORB=3  &END
+ 1 0  2 0  2 1
+  2    2    0
+  2    1    1
+  2    0    2
+ &SMINIM NZION=6  &END
+Esto calculará las anchuras autoionizantes de los estados sobre el umbral.
+En la salida (olg o olp) se imprimen los anchos Γ en unidades de Rydbergs, además de la energía y configuraciones.
+
+Ejemplo de salida (simplificado):
+
+  K        T       ENERGY/RYD     WIDTH/RYD
+  1        1        -72.123456     0.000000
+  2        2        -71.123456     0.000123
+  ...
+⚠️ Importante: Solo los estados por encima del umbral tienen anchos distintos de cero (es decir, pueden autoionizarse).
+Fotoionización
+Para calcular secciones eficaces de fotoionización (o recombinación radiativa), se activa con:
+
+ &SALGIN MXCONF=3 MXVORB=3 PHOTON='YES'  &END
+Y también se puede usar:
+
+PHOTON='PI'
+para hacer únicamente fotoionización sin calcular recombinación radiativa inversa.
+
+La salida incluye datos como:
+
+energías de los fotones incidentes
+secciones eficaces (en Mb = megabarns)
+contribuciones parciales por canales
+Ejemplo de fragmento de salida:
+
+PHOTOIONIZATION CROSS SECTIONS (in Mb)
+
+Photon Energy (Ry):  1.000   2.000   3.000
+Sigma(Mb):           0.123   0.456   0.789
+También se generan archivos de salida más detallados (piout, rcout, etc.), especialmente si se solicita mediante la bandera:
+
+IPRINT=1
+Parámetros útiles en SALGIN:
+AUTO='YES' activa el cálculo de autoionización.
+PHOTON='YES' activa fotoionización.
+IPRINT=1 produce salida detallada.
+NZION=Z fija el número atómico.
+CUP='IC' activa acoplamiento intermedio si se desea.
+
